@@ -135,14 +135,27 @@ ul {
   gap: 10px;
 }
 .brand-name {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 650;
+  line-height: 1;
   white-space: nowrap;
 }
 .brand-icon {
+  display: grid;
+  place-items: center;
   flex: none;
   color: var(--accent-active);
   font-size: 22px;
+  line-height: 1;
+}
+.brand-icon svg,
+#mobile-directory .icon-button svg {
+  display: block;
+}
+#mobile-directory .icon-button {
+  width: 32px;
+  font-size: 16px;
+  line-height: 1;
 }
 .scope-icon {
   display: grid;
@@ -201,7 +214,7 @@ ul {
 }
 .dashboard-nav {
   max-height: 100%;
-  padding: 16px 12px;
+  padding: 12px;
   overflow: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
@@ -888,7 +901,7 @@ ul {
     clip-path: inset(50%);
   }
   .brand-icon {
-    display: inline-flex;
+    display: grid;
   }
 }
 @media (prefers-reduced-motion: reduce) {
