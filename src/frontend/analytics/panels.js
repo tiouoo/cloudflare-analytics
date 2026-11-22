@@ -5,7 +5,11 @@ const regions = new Intl.DisplayNames("zh-CN", { type: "region", fallback: "none
 export function formatNumber(value) {
   if (value == null) return "—";
   if (Math.abs(value) >= 1_000) return (value / 1_000).toFixed(2) + " k";
-  return numbers.format(value);
+  return formatExactNumber(value);
+}
+
+export function formatExactNumber(value) {
+  return value == null ? "—" : numbers.format(value);
 }
 
 export function formatMetric(value, unit) {

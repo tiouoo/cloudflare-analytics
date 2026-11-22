@@ -1,13 +1,12 @@
 <script setup>
 import { computed } from "vue";
 import { formatMetric } from "../analytics/panels.js";
-import MetricSparkline from "./MetricSparkline.vue";
 
 const props = defineProps({
   cards: { type: Array, required: true },
   anchor: Function,
-  dark: Boolean,
 });
+const selected = defineModel("selected", { type: String });
 const percent = new Intl.NumberFormat("zh-CN", { style: "percent", maximumFractionDigits: 1 });
 const tiles = computed(() => props.cards.map((card) => {
   const { value, unit, previous, lowerIsBetter } = card;
@@ -30,9 +29,11 @@ const tiles = computed(() => props.cards.map((card) => {
 
 <template>
   <dl class="kpi-grid">
-    <div v-for="tile in tiles" :key="tile.key" class="kpi">
+    <div v-for="tile in tiles" :key="tile.key" class="kpi" :class="{ 'is-selected': selected === tile.key }">
       <dt>
         <a v-if="tile.target && anchor" :href="'#' + anchor(tile.target)">{{ tile.label }}</a>
+        <button v-else-if="selected != null" class="kpi-select" type="button" :aria-pressed="selected === tile.key"
+          @click="selected = tile.key">{{ tile.label }}</button>
         <span v-else>{{ tile.label }}</span>
       </dt>
       <dd>
@@ -42,10 +43,6 @@ const tiles = computed(() => props.cards.map((card) => {
           <span class="sr-only">{{ tile.accessibleChange }}，{{ tile.hint }}</span>
         </span>
       </dd>
-      <div class="kpi-trend">
-        <MetricSparkline v-if="tile.points.some((point) => point != null)" :points="tile.points" :dark="dark"
-          :percentage="tile.unit === '%'" />
-      </div>
     </div>
   </dl>
 </template>

@@ -3,41 +3,65 @@
   --picker-radius: 13px;
   --picker-focus: #80aaff;
   --picker-chevron: #8090a9;
-  --picker-highlight: #767676;
 }
 
 :root[data-theme="dark"] {
   --picker-focus: #9bbcff;
   --picker-chevron: #a2aec2;
-  --picker-highlight: #595969;
 }
 
-.picker-trigger {
+.dashboard-picker.ant-select {
+  width: min(148px, 100%);
+}
+
+.header-controls .dashboard-picker.ant-select {
+  width: clamp(112px, 22vw, 148px);
+}
+
+.trend-header .dashboard-picker.ant-select {
+  margin-inline-start: auto;
+}
+
+.dashboard-picker.ant-select.ant-select-single > .ant-select-selector {
   height: var(--picker-height);
   padding-inline: 12px 14px;
   border: 1px solid var(--border);
   border-radius: var(--picker-radius);
   background: var(--surface);
   color: var(--text);
+  font-family: var(--app-font-family);
   font-size: 13px;
+  box-shadow: none;
   transition: border-color 0.15s ease;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
   text-align: start;
   white-space: nowrap;
   cursor: pointer;
 }
 
-.picker-trigger:hover,
-.picker-trigger:focus-visible,
-.picker-trigger[aria-expanded="true"] {
+.dashboard-picker.ant-select.ant-select-single:hover > .ant-select-selector,
+.dashboard-picker.ant-select.ant-select-single.ant-select-focused > .ant-select-selector,
+.dashboard-picker.ant-select.ant-select-single.ant-select-open > .ant-select-selector {
   border-color: var(--picker-focus);
+  box-shadow: none;
 }
 
-.picker-trigger:focus-visible {
-  outline-color: var(--picker-focus);
+.dashboard-picker.ant-select.ant-select-single > .ant-select-selector:has(input:focus-visible) {
+  outline: 2px solid var(--picker-focus);
+  outline-offset: 3px;
+}
+
+.dashboard-picker.ant-select.ant-select-single .ant-select-selection-item,
+.dashboard-picker.ant-select.ant-select-single input.ant-select-selection-search-input {
+  height: calc(var(--picker-height) - 2px);
+  line-height: calc(var(--picker-height) - 2px);
+  color: var(--text);
+}
+
+.dashboard-picker.ant-select .ant-select-arrow {
+  top: 50%;
+  inset-inline-end: 14px;
 }
 
 .picker-chevron {
@@ -52,24 +76,34 @@
   transform: rotate(45deg);
 }
 
-.picker-popup.range-list {
-  padding: 0;
+.dashboard-picker-popup.ant-select-dropdown {
+  padding: 4px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--picker-radius);
   background: var(--elevated);
-  box-shadow: none;
+  font-family: var(--app-font-family);
+  box-shadow: var(--float-shadow);
+  overflow: hidden;
 }
 
-.picker-option {
-  min-height: 24px;
-  padding: 3px 12px;
-  border-radius: 0;
+.dashboard-picker-popup.ant-select-dropdown .ant-select-item-option {
+  min-height: 28px;
+  padding: 4px 8px;
+  border-radius: 8px;
   color: var(--text);
   font-size: 13px;
-  line-height: 18px;
 }
 
-.picker-option.is-active {
-  background: var(--picker-highlight);
-  color: #fff;
+.dashboard-picker-popup.ant-select-dropdown .ant-select-item-option-content {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-picker-popup.ant-select-dropdown .ant-select-item-option-selected {
+  background: var(--selected);
+  color: var(--accent-active);
+}
+
+.dashboard-picker-popup.ant-select-dropdown .ant-select-item-option-active:not(.ant-select-item-option-selected) {
+  background: var(--hover);
 }

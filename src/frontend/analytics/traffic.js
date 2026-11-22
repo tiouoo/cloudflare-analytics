@@ -48,20 +48,25 @@ function indexByTime(series) {
   return new Map(series?.data.map((point) => [point.time, point]));
 }
 
-export function trafficCards({ totals, encrypted, statuses, trend, errorTrend }) {
-  const current = values(totals?.data, encrypted?.data, statuses?.data?.totals[2], statuses?.data?.totals[3]);
-  const previous = values(totals?.previous?.data, encrypted?.previous?.data,
-    statuses?.previous?.data[0], statuses?.previous?.data[1]);
+export function trafficSeries({ trend, encrypted, errorTrend }) {
+  if (!trend?.data) return null;
   const encryptedByTime = indexByTime(encrypted?.data?.trend);
   const clientErrors = indexByTime(errorTrend?.data?.client);
   const serverErrors = indexByTime(errorTrend?.data?.server);
-  const series = trend?.data?.data.map((point) => values(point, encryptedByTime.get(point.time),
-    clientErrors.get(point.time)?.requests, serverErrors.get(point.time)?.requests)) ?? [];
+  return {
+    ...trend.data,
+    data: trend.data.data.map((point) => values(point, encryptedByTime.get(point.time),
+      clientErrors.get(point.time)?.requests, serverErrors.get(point.time)?.requests)),
+  };
+}
 
+export function trafficCards({ totals, encrypted, statuses }) {
+  const current = values(totals?.data, encrypted?.data, statuses?.data?.totals[2], statuses?.data?.totals[3]);
+  const previous = values(totals?.previous?.data, encrypted?.previous?.data,
+    statuses?.previous?.data[0], statuses?.previous?.data[1]);
   return (cards) => cards.map((card) => ({
     ...card,
     value: current[card.key],
     previous: previous[card.key],
-    points: series.map((point) => point[card.key] ?? null),
   }));
 }

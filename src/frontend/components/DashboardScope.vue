@@ -1,16 +1,16 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, useTemplateRef } from "vue";
+import { computed, onMounted, onUnmounted, reactive, ref, useTemplateRef } from "vue";
 import { GlobalOutlined } from "@ant-design/icons-vue";
-import { countryName, formatMetric, formatNumber } from "../analytics/panels.js";
-import { cacheCards, encryptionCards, errorCards, overviewCards, trafficCards } from "../analytics/traffic.js";
+import { countryName, formatNumber } from "../analytics/panels.js";
+import { cacheCards, encryptionCards, errorCards, overviewCards, trafficCards, trafficSeries } from "../analytics/traffic.js";
 import { useResource } from "../analytics/useResource.js";
 import { queryCloudflare } from "../api/cloudflare.js";
 import MetricBreakdown from "./MetricBreakdown.vue";
 import MetricValues from "./MetricValues.vue";
 import PanelContent from "./PanelContent.vue";
 import RequestDistribution from "./RequestDistribution.vue";
-import TimeSeries from "./TimeSeries.vue";
 import TrafficCards from "./TrafficCards.vue";
+import TrafficTrend from "./TrafficTrend.vue";
 
 const props = defineProps({
   group: { type: Object, required: true },
@@ -45,6 +45,7 @@ const panels = computed(() => result.value?.panels ?? {});
 const totals = computed(() => panels.value.totals?.data);
 const securityActionLabel = "安全规则处理的 HTTP 请求";
 const anchor = (key) => props.group.id + "-" + key;
+const series = computed(() => trafficSeries(panels.value));
 const cards = computed(() => trafficCards(panels.value));
 const rankingTotal = (key) => panels.value[key]?.from === panels.value.totals?.from ? totals.value?.requests : undefined;
 const seriesOptions = [
@@ -53,7 +54,13 @@ const seriesOptions = [
   { key: "bytes", label: "流量", unit: "bytes" },
   { key: "hitRate", label: "缓存命中率", unit: "%" },
 ];
-const selectedSeries = ref(seriesOptions[0]);
+const metricSections = [
+  { key: "encryption", title: "安全性", panel: "encrypted", trendPanel: "encrypted", cards: encryptionCards },
+  { key: "cache", title: "缓存", panel: "totals", cards: cacheCards },
+  { key: "errors", title: "HTTP 错误", panel: "statuses", trendPanel: "errorTrend", cards: errorCards },
+];
+const selectedTrafficMetric = ref(seriesOptions[0].key);
+const selectedSectionMetrics = reactive(Object.fromEntries(metricSections.map(({ key, cards }) => [key, cards[0].key])));
 const devices = { desktop: "桌面", mobile: "手机", tablet: "平板" };
 const cacheStatuses = {
   hit: "命中", miss: "未命中", dynamic: "动态", expired: "已过期", bypass: "绕过",
@@ -98,49 +105,38 @@ const productValues = [
       </div>
     </header>
     <p v-if="error" class="scope-error" role="alert">{{ error }}</p>
-    <TrafficCards :cards="cards(overviewCards)" :anchor="anchor" :dark="dark" />
+    <TrafficCards :cards="cards(overviewCards)" :anchor="anchor" class="overview-metrics" />
     <p v-if="totals && !panels.totals.previous" class="panel-message comparison-note">当前时间范围缺少完整的上一同等时段数据，环比暂不可用。</p>
 
     <article :id="anchor('requests')" class="panel traffic-panel" data-dashboard-anchor :data-group="group.id">
-      <header class="panel-header">
-        <h3>HTTP 流量趋势</h3>
-        <div class="metric-switch" role="group" aria-label="趋势指标">
-          <button v-for="metric in seriesOptions" :key="metric.key" type="button"
-            :aria-pressed="selectedSeries.key === metric.key" @click="selectedSeries = metric">
-            {{ metric.label }}
-          </button>
-        </div>
-      </header>
-      <PanelContent :panel="panels.trend" :failed="error" chart>
-        <template #default="{ data }">
-          <TimeSeries v-if="data.data.some((point) => point.requests > 0)" :series="data" :metric="selectedSeries" :dark="dark" />
-          <p v-else class="panel-message empty-chart">所选时间内暂无 HTTP 请求</p>
-        </template>
-      </PanelContent>
+      <TrafficTrend v-model="selectedTrafficMetric" title="HTTP 流量趋势" label="流量趋势指标" :metrics="seriesOptions"
+        :panel="panels.trend" :series="series" :failed="error" :dark="dark" />
     </article>
 
-    <section v-for="section in [
-      { key: 'encryption', title: '安全性', panel: panels.encrypted, cards: encryptionCards },
-      { key: 'cache', title: '缓存', panel: panels.totals, cards: cacheCards },
-      { key: 'errors', title: 'HTTP 错误', panel: panels.statuses, cards: errorCards },
-    ]" :id="anchor(section.key)" :key="section.key" class="panel metric-section" data-dashboard-anchor :data-group="group.id">
-      <h3>{{ section.title }}</h3>
-      <TrafficCards :cards="cards(section.cards)" :dark="dark" />
-      <p v-if="section.panel?.error || (section.key === 'errors' && panels.errorTrend?.error)" class="panel-message metric-note">
-        {{ section.panel?.error || panels.errorTrend.error }}
-      </p>
+    <section v-for="{ key, title, panel, trendPanel, cards: metrics } in metricSections" :id="anchor(key)" :key="key"
+      class="metric-section" data-dashboard-anchor :data-group="group.id">
+      <h3 class="section-heading">{{ title }}</h3>
+      <div class="panel metric-summary">
+        <TrafficCards v-model:selected="selectedSectionMetrics[key]" :cards="cards(metrics)" />
+        <p v-if="panels[panel]?.error" class="panel-message metric-note">{{ panels[panel].error }}</p>
+        <div class="metric-trend">
+          <TrafficTrend v-model="selectedSectionMetrics[key]" :label="title + '趋势指标'"
+            :metrics="metrics" :panel="panels.trend" :series="series"
+            :failed="error || panels[trendPanel]?.error" :dark="dark" />
+        </div>
+      </div>
     </section>
 
     <section :id="anchor('audience')" class="audience-grid" data-dashboard-anchor :data-group="group.id">
       <article class="panel">
-        <h3>按设备类型查看请求</h3>
+        <h3>设备类型</h3>
         <PanelContent :panel="panels.devices" :failed="error" v-slot="{ data }">
           <RequestDistribution :rows="data.map(({ label, value }) => ({ label: devices[label?.toLowerCase()] ?? label ?? '未知', value }))" ring />
         </PanelContent>
       </article>
       <article class="panel">
         <header class="panel-header">
-          <h3>按国家或地区查看请求</h3>
+          <h3>国家或地区</h3>
           <p v-if="totals" class="panel-message">页面浏览量 <strong>{{ formatNumber(totals.pageViews) }}</strong></p>
         </header>
         <PanelContent :panel="panels.countries" :failed="error" v-slot="{ data }">
@@ -162,7 +158,7 @@ const productValues = [
 
     <section v-for="{ key, title, rankings, compact } in rankGroups" :id="anchor(key)" :key="key" class="rank-section"
       data-dashboard-anchor :data-group="group.id">
-      <h3>{{ title }}</h3>
+      <h3 class="section-heading">{{ title }}</h3>
       <div class="rank-grid" :class="{ 'rank-grid-two': compact }">
         <article v-for="[metric, label, format] in rankings" :key="metric" class="panel rank-card">
           <h4>{{ label }}</h4>

@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onUnmounted, shallowRef, useTemplateRef, watch } from "vue";
 import { Chart, Filler, LineController, LineElement, LinearScale, PointElement } from "chart.js";
-import { formatMetric } from "../analytics/panels.js";
+import { formatExactNumber, formatMetric } from "../analytics/panels.js";
 
 Chart.register(LineController, LineElement, LinearScale, PointElement, Filler);
 
@@ -12,6 +12,9 @@ const props = defineProps({
 });
 const canvas = useTemplateRef("canvas");
 const hover = shallowRef(null);
+const hoverValue = computed(() => props.metric.unit
+  ? formatMetric(hover.value?.y, props.metric.unit)
+  : formatExactNumber(hover.value?.y));
 let chart;
 
 const bucketLabels = {
@@ -183,10 +186,10 @@ onUnmounted(() => chart?.destroy());
     <canvas ref="canvas" role="img" :aria-label="metric.label + '趋势'" />
     <div v-if="hover" class="chart-tooltip" :style="{ transform: 'translate(' + hover.left + 'px,' + hover.top + 'px)' }">
       <small>{{ timeLabel.format(hover.time) }} · {{ bucketLabels[series.bucket] }}</small>
-      <span><i />{{ metric.label }}<strong>{{ formatMetric(hover.y, metric.unit) }}</strong></span>
+      <span><i />{{ metric.label }}<strong>{{ hoverValue }}</strong></span>
     </div>
     <span v-if="hover" class="sr-only" aria-live="polite">
-      {{ timeLabel.format(hover.time) }} {{ metric.label }} {{ formatMetric(hover.y, metric.unit) }}
+      {{ timeLabel.format(hover.time) }} {{ metric.label }} {{ hoverValue }}
     </span>
   </div>
 </template>
@@ -210,7 +213,7 @@ onUnmounted(() => chart?.destroy());
   animation: appear 140ms ease-out;
 }
 .chart-tooltip small { display: block; color: var(--muted); font-size: 11px; white-space: nowrap; }
-.chart-tooltip span { display: flex; align-items: center; gap: 5px; margin-top: 5px; font-size: 12px; }
+.chart-tooltip span { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 5px; font-size: 12px; }
 .chart-tooltip i { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--accent); }
 .chart-tooltip strong { margin-inline-start: auto; font-variant-numeric: tabular-nums; }
 @keyframes appear { from { opacity: 0; } }
