@@ -1,10 +1,17 @@
 import { createRouter, createWebHistory } from "vue-router";
 
+const dashboard = () => import("./views/HomeView.vue");
 const pages = [
   {
     path: "",
     name: "home",
-    component: () => import("./views/HomeView.vue"),
+    component: dashboard,
+    meta: { title: "Cloudflare Analytics" },
+  },
+  {
+    path: ":accountId([a-fA-F0-9]{32})/:token([a-zA-Z0-9_-]+)",
+    name: "account",
+    component: dashboard,
     meta: { title: "Cloudflare Analytics" },
   },
   {

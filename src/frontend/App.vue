@@ -105,9 +105,9 @@ const config = computed(() => {
 });
 </script>
 <template>
-  <ConfigProvider :theme="config">
-    <RouterView v-slot="{ Component }"
-      ><component :is="Component" :dark="dark" @toggle-theme="toggleTheme"
-    /></RouterView>
+  <ConfigProvider :theme="config" :auto-insert-space-in-button="false">
+    <RouterView v-slot="{ Component }">
+      <component :is="Component" :dark="dark" @toggle-theme="toggleTheme" />
+    </RouterView>
   </ConfigProvider>
 </template>

@@ -20,6 +20,9 @@
   --muted: #72727e;
   --disabled: #9999a3;
   --border: #e5e5e9;
+  --danger: #a52939;
+  --danger-background: #fff2f3;
+  --signal-live: #25806a;
   color: var(--text);
   background: var(--background);
   color-scheme: light;
@@ -39,11 +42,10 @@
   --muted: #a2a2ae;
   --disabled: #74747f;
   --border: #39393f;
+  --danger: #ffacb4;
+  --danger-background: #442c34;
+  --signal-live: #65c4a8;
   color-scheme: dark;
-}
-
-* {
-  transition: all 0.2s ease-in-out;
 }
 
 *,
