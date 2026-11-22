@@ -79,9 +79,6 @@ const rankGroups = [
     ["originStatuses", "热门源站状态码", (value) => value === 0 ? "无源站响应" : value],
     ["methods", "热门 HTTP 方法"],
   ] },
-  ...(props.zone ? [{ key: "logs", title: "HTTP 日志排行", compact: true, rankings: [
-    ["ports", "热门客户端源端口"], ["regions", "热门州省代码"],
-  ] }] : []),
 ];
 const statusLabels = ["2xx 成功", "3xx 重定向", "4xx 客户端错误", "5xx 服务器错误"];
 const statusDistribution = (values) => values.map((value, index) => ({
@@ -163,7 +160,7 @@ const productValues = [
         <article v-for="[metric, label, format] in rankings" :key="metric" class="panel rank-card">
           <h4>{{ label }}</h4>
           <PanelContent :panel="panels[metric]" :failed="error" v-slot="{ data }">
-            <MetricBreakdown :rows="data" :dimension="label" :label="format" :total="key === 'logs' ? undefined : rankingTotal(metric)" ranked />
+            <MetricBreakdown :rows="data" :dimension="label" :label="format" :total="rankingTotal(metric)" ranked />
           </PanelContent>
         </article>
       </div>

@@ -33,7 +33,7 @@ const services = [
 export function dashboardSections(zone) {
   const id = zone ? "site-" + zone.name.toLowerCase() : "overview";
   const sections = zone
-    ? [...traffic, ["logs", "HTTP 日志排行", BarChartOutlined], ...services]
+    ? [...traffic, ...services]
     : [...traffic, ...services, ["products", "Cloudflare 产品", ThunderboltOutlined]];
   return {
     id,

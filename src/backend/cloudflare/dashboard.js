@@ -1,6 +1,5 @@
 import { HTTPException } from "hono/http-exception";
 import { bucketForDuration } from "../../analytics/ranges.js";
-import { loadLogRankings } from "./log-rankings.js";
 import { metrics } from "./metrics.js";
 
 const overview = metrics.requests.dataset;
@@ -276,11 +275,10 @@ export async function loadDashboard(cloudflare, scope, id, range) {
   const now = Date.now();
   const getWindow = (dataset) => queryWindow(range, settings?.[dataset], now);
   const run = (fields, { from, to }) => cloudflare.queryScope(scope, id, fields, { from, to });
-  const [base, overviewBreakdowns, requestBreakdowns, logBreakdowns] = await Promise.all([
+  const [base, overviewBreakdowns, requestBreakdowns] = await Promise.all([
     Promise.all(Object.entries(panels).map(async ([key, metric]) => [key, await loadMetric(metric, getWindow, run)])),
     loadRankings(overviewRankings, getWindow, run),
     loadRankings(requestRankings, getWindow, run),
-    scope === "zones" ? loadLogRankings(cloudflare, id, range, now) : [],
   ]);
-  return { panels: Object.fromEntries([...base, ...overviewBreakdowns, ...requestBreakdowns, ...logBreakdowns]) };
+  return { panels: Object.fromEntries([...base, ...overviewBreakdowns, ...requestBreakdowns]) };
 }

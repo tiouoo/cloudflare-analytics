@@ -95,15 +95,6 @@ export function createCloudflareClient(token, requestSignal) {
       }
     },
 
-    async queryHttpLogs(zoneId, query) {
-      const params = new URLSearchParams({ query });
-      const { result } = await send(`/zones/${zoneId}/logs/explorer/query/sql?${params}`);
-      if (!Array.isArray(result)) {
-        throw new HTTPException(502, { message: "Cloudflare Log Explorer 未返回有效的结果。" });
-      }
-      return result;
-    },
-
     async queryScope(scope, id, fields, bounds) {
       const tag = scope === "zones" ? "zoneTag" : "accountTag";
       const timeVariables = bounds ? ", $from: Time!, $to: Time!" : "";
