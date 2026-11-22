@@ -1,1 +1,1 @@
-export const appName = 'Vue Template';
+export const appName = "cloudflare-analytics";
