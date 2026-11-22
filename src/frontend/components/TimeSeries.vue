@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onUnmounted, shallowRef, useTemplateRef, watch } from "vue";
 import { Chart, Filler, LineController, LineElement, LinearScale, PointElement } from "chart.js";
-import { formatAxis, formatMetric } from "../analytics/panels.js";
+import { formatMetric } from "../analytics/panels.js";
 
 Chart.register(LineController, LineElement, LinearScale, PointElement, Filler);
 
@@ -130,7 +130,7 @@ watch([canvas, () => props.series, () => props.metric, () => props.dark], () => 
           ...(unit === "%" ? { min: 0, max: 100 } : {}),
           border: { display: false, dash: [4, 4] },
           grid: { color: grid, drawTicks: false },
-          ticks: { maxTicksLimit: 5, padding: 10, precision: 0, callback: (value) => formatAxis(value, unit) },
+          ticks: { maxTicksLimit: 5, padding: 10, precision: 0, callback: (value) => formatMetric(value, unit) },
         },
       },
     },

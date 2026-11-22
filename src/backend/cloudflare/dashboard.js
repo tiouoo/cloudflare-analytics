@@ -33,6 +33,18 @@ function select(dataset, { fields, limit = 1, order, filter }, pageSize) {
     filter: { datetime_geq: $from, datetime_lt: $to${extra} }) { ${fields} }`;
 }
 
+function actionCounts(metric) {
+  return {
+    dataset: metric.dataset,
+    async query(run, { pageSize }) {
+      const actions = select(metric.dataset, metric, pageSize);
+      const total = select(metric.dataset, { fields: "count", filter: metric.filter }, pageSize);
+      const { rows, aggregate } = await run(`rows: ${actions} aggregate: ${total}`);
+      return { count: aggregate?.[0]?.count ?? 0, actions: metric.format(rows ?? []) };
+    },
+  };
+}
+
 const datasets = {
   totals: totals(overview, "requests bytes visits pageViews cachedRequests cachedBytes"),
   versions: {
@@ -45,7 +57,8 @@ const datasets = {
     })),
   },
   countries: metrics.countries,
-  securityActions: breakdown(http, "securityAction", 'securityAction_neq: ""'),
+  security: actionCounts(metrics.security),
+  securityActions: actionCounts(breakdown(http, "securityAction", 'securityAction_neq: ""')),
   dns: metrics.dns,
   endpoints: metrics["api-requests"],
   infrastructure: metrics.infrastructure,
@@ -102,16 +115,6 @@ const statuses = {
   },
 };
 
-const security = {
-  dataset: metrics.security.dataset,
-  async query(run, { pageSize }) {
-    const actions = select(this.dataset, metrics.security, pageSize);
-    const total = select(this.dataset, { fields: "count" }, pageSize);
-    const { rows, aggregate } = await run(`rows: ${actions} aggregate: ${total}`);
-    return { count: aggregate?.[0]?.count ?? 0, actions: metrics.security.format(rows ?? []) };
-  },
-};
-
 const trend = {
   dataset: overview,
   async query(run, { from, to, bucket, pageSize }) {
@@ -139,7 +142,7 @@ const trend = {
 };
 
 export async function loadDashboard(cloudflare, scope, id, range) {
-  const metrics = { ...datasets, ...(scope === "accounts" ? products : {}), statuses, trend, security };
+  const metrics = { ...datasets, ...(scope === "accounts" ? products : {}), statuses, trend };
   const names = [...new Set(Object.values(metrics).map(({ dataset }) => dataset))];
   const fields = names.map((name) => `${name} { enabled maxDuration notOlderThan maxPageSize }`).join("\n");
   const { settings } = await cloudflare.queryScope(scope, id, `settings { ${fields} }`);

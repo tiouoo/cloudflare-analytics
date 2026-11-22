@@ -40,6 +40,7 @@ onUnmounted(() => observer?.disconnect());
 
 const panels = computed(() => result.value?.panels ?? {});
 const totals = computed(() => panels.value.totals?.data);
+const securityActionLabel = "安全规则处理的 HTTP 请求";
 const hitRate = computed(() => totals.value?.requests ? 100 * totals.value.cachedRequests / totals.value.requests : null);
 const statusTotals = computed(() => panels.value.statuses?.data?.totals ?? []);
 const errorRate = computed(() => totals.value?.requests && statusTotals.value.length
@@ -49,7 +50,7 @@ const kpis = computed(() => [
   { label: "HTTP 请求数", value: totals.value?.requests, panel: panels.value.totals, icon: BarChartOutlined, target: "requests" },
   { label: "HTTP 响应流量", value: totals.value?.bytes, unit: "bytes", panel: panels.value.totals, icon: CloudOutlined, target: "requests" },
   { label: "缓存命中率", value: hitRate.value, unit: "%", panel: panels.value.totals, icon: DatabaseOutlined, target: "cache" },
-  { label: "安全事件", value: panels.value.security?.data?.count, panel: panels.value.security, icon: SafetyCertificateOutlined, target: "security" },
+  { label: securityActionLabel, value: panels.value.securityActions?.data?.count, panel: panels.value.securityActions, icon: SafetyCertificateOutlined, target: "security" },
 ]);
 const seriesOptions = [
   { key: "requests", label: "请求数" },
@@ -148,16 +149,17 @@ const anchor = (key) => props.group.id + "-" + key;
     <article :id="anchor('security')" class="panel" data-dashboard-anchor :data-group="group.id">
       <h3>安全事件</h3>
       <div class="panel-split">
-        <div>
+        <div v-if="panels.security?.data?.actions.length">
           <h4>防火墙事件</h4>
-          <PanelContent :panel="panels.security" :failed="error" v-slot="{ data }">
+          <PanelContent :panel="panels.security" v-slot="{ data }">
+            <MetricValues :items="[{ label: '事件总数', value: data.count }]" />
             <MetricBreakdown :rows="data.actions" dimension="动作" measure="事件数" />
           </PanelContent>
         </div>
         <div>
-          <h4>安全规则处理的 HTTP 请求</h4>
+          <h4>{{ securityActionLabel }}</h4>
           <PanelContent :panel="panels.securityActions" :failed="error" v-slot="{ data }">
-            <MetricBreakdown :rows="data" dimension="动作" />
+            <MetricBreakdown :rows="data.actions" dimension="动作" />
           </PanelContent>
         </div>
       </div>
@@ -191,9 +193,9 @@ const anchor = (key) => props.group.id + "-" + key;
             <MetricValues :items="[{ label: '平均响应耗时', value: data, unit: ' ms' }]" />
           </PanelContent>
         </div>
-        <div>
+        <div v-if="panels.edge?.data != null">
           <h4>边缘耗时</h4>
-          <PanelContent :panel="panels.edge" :failed="error" v-slot="{ data }">
+          <PanelContent :panel="panels.edge" v-slot="{ data }">
             <MetricValues :items="[{ label: '平均首字节耗时', value: data, unit: ' ms' }]" />
           </PanelContent>
         </div>
