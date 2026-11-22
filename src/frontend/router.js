@@ -27,7 +27,10 @@ const router = createRouter({
   routes: [
     { path: "/", component: () => import("./MainView.vue"), children: pages },
   ],
-  scrollBehavior: () => ({ top: 0 }),
+  scrollBehavior(to, from, savedPosition) {
+    if (to.hash || to.path === from.path) return;
+    return savedPosition ?? { top: 0 };
+  },
 });
 
 router.afterEach((to, _from, failure) => {

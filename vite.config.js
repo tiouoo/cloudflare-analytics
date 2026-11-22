@@ -17,14 +17,18 @@ function apiMiddleware(loadApp) {
   };
 }
 
+function loadBackendEnv({ mode, envDir }) {
+  const localEnv = loadEnv(mode, envDir, 'CLOUDFLARE_');
+  for (const key of ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_VISIBLE_DOMAINS']) {
+    if (localEnv[key]) process.env[key] ??= localEnv[key];
+  }
+}
+
 function backendPlugin() {
   return {
     name: 'hono-backend',
     configureServer(server) {
-      const localEnv = loadEnv(server.config.mode, server.config.envDir, 'CLOUDFLARE_');
-      for (const key of ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN']) {
-        if (localEnv[key]) process.env[key] ??= localEnv[key];
-      }
+      loadBackendEnv(server.config);
 
       server.middlewares.use(apiMiddleware(async () => {
         const module = await server.ssrLoadModule('/src/backend/api.js');
@@ -32,6 +36,7 @@ function backendPlugin() {
       }));
     },
     configurePreviewServer(server) {
+      loadBackendEnv(server.config);
       server.middlewares.use(apiMiddleware(async () => app));
     },
   };

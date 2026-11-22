@@ -3,6 +3,7 @@ import { HTTPException } from "hono/http-exception";
 import { identifierPattern } from "../../analytics/credentials.js";
 import { bucketForDuration, timeRanges } from "../../analytics/ranges.js";
 import { accountCredentials, createCloudflareClient } from "../cloudflare/client.js";
+import { loadDashboard } from "../cloudflare/dashboard.js";
 import { metrics } from "../cloudflare/metrics.js";
 
 const routes = new Hono();
@@ -17,7 +18,35 @@ routes.use("*", async (context, next) => {
 
 routes.get("/zones", async (context) => {
   const zones = await context.get("cloudflare").listZones(context.get("accountId"));
-  return context.json({ zones });
+  const visibleDomains = new Set((process.env.CLOUDFLARE_VISIBLE_DOMAINS ?? "")
+    .split(/[,，]/)
+    .map((domain) => domain.trim().toLowerCase().replace(/\.$/, ""))
+    .filter(Boolean));
+  return context.json({
+    zones: visibleDomains.size ? zones.filter(({ name }) => visibleDomains.has(name.toLowerCase())) : zones,
+  });
+});
+
+function requestRange(context) {
+  const range = timeRanges.find(({ value }) => value === context.req.query("range"));
+  if (!range) throw new HTTPException(400, { message: "请选择有效的时间范围。" });
+  return range;
+}
+
+routes.get("/overview", async (context) => {
+  const range = requestRange(context);
+  return context.json(await loadDashboard(context.get("cloudflare"), "accounts", context.get("accountId"), range));
+});
+
+routes.get("/site", async (context) => {
+  const range = requestRange(context);
+  const zone = context.req.query("zone");
+  if (!zone || !identifierPattern.test(zone)) {
+    throw new HTTPException(400, { message: "请选择有效的站点。" });
+  }
+  const cloudflare = context.get("cloudflare");
+  await cloudflare.assertZoneAccess(zone, context.get("accountId"));
+  return context.json(await loadDashboard(cloudflare, "zones", zone, range));
 });
 
 routes.get("/:metric", async (context) => {
@@ -36,10 +65,7 @@ routes.get("/:metric", async (context) => {
     format,
     fields,
   } = metrics[name];
-  const selectedRange = timeRanges.find(({ value }) => value === context.req.query("range"));
-  if (!selectedRange) {
-    throw new HTTPException(400, { message: "请选择有效的时间范围。" });
-  }
+  const selectedRange = requestRange(context);
 
   const cloudflare = context.get("cloudflare");
   const accountId = context.get("accountId");

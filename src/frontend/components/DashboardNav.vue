@@ -1,59 +1,47 @@
 <script setup>
-import { sections } from "../analytics/sections.js";
+import { nextTick, useTemplateRef, watch } from "vue";
+import { AppstoreOutlined, GlobalOutlined } from "@ant-design/icons-vue";
 
-defineProps({ active: String });
-defineEmits(["select"]);
+const props = defineProps({
+  groups: { type: Array, required: true },
+  active: String,
+  activeGroup: String,
+});
+const emit = defineEmits(["navigate"]);
+const nav = useTemplateRef("nav");
+
+watch(() => props.active, async () => {
+  await nextTick();
+  const link = nav.value?.querySelector("[aria-current]");
+  if (!link || !nav.value.clientHeight) return;
+  const container = nav.value.getBoundingClientRect();
+  const item = link.getBoundingClientRect();
+  if (item.bottom > container.bottom) nav.value.scrollTop += item.bottom - container.bottom + 8;
+  if (item.top < container.top) nav.value.scrollTop -= container.top - item.top + 8;
+});
 </script>
 
 <template>
-  <nav aria-label="统计导航" class="nav">
-    <button
-      v-for="{ id, title, icon } in sections"
-      :key="id"
-      type="button"
-      :aria-current="active === id ? 'page' : undefined"
-      @click="$emit('select', id)"
-    >
-      <component :is="icon" aria-hidden="true" />
-      {{ title }}
-    </button>
+  <nav ref="nav" class="dashboard-nav" aria-label="本页目录">
+    <p class="nav-label">本页目录</p>
+    <ul class="anchor-groups">
+      <li v-for="group in groups" :key="group.id">
+        <a class="group-link" :class="{ 'active-group': activeGroup === group.id }" :href="'#' + group.id"
+          :aria-current="active === group.id ? 'location' : undefined" @click="emit('navigate')">
+          <AppstoreOutlined v-if="group.id === 'overview'" aria-hidden="true" />
+          <GlobalOutlined v-else aria-hidden="true" />
+          <span>{{ group.title }}</span>
+        </a>
+        <ul v-if="activeGroup === group.id" class="anchor-children">
+          <li v-for="section in group.sections" :key="section.id">
+            <a :href="'#' + section.id" :aria-current="active === section.id ? 'location' : undefined"
+              @click="emit('navigate')">
+              <component :is="section.icon" aria-hidden="true" />
+              {{ section.title }}
+            </a>
+          </li>
+        </ul>
+      </li>
+    </ul>
   </nav>
 </template>
-
-<style scoped>
-.nav {
-  display: grid;
-  align-content: start;
-  gap: 4px;
-  padding: 16px 12px;
-}
-
-.nav button {
-  display: flex;
-  min-height: 42px;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--muted);
-  text-align: left;
-  cursor: pointer;
-}
-
-.nav button:hover {
-  background: var(--hover);
-  color: var(--text);
-}
-
-.nav button[aria-current] {
-  background: var(--selected);
-  color: var(--accent-active);
-  font-weight: 600;
-}
-
-.nav :deep(.anticon) {
-  font-size: 16px;
-}
-</style>

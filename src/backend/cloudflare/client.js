@@ -9,7 +9,7 @@ export function accountCredentials(context) {
     const defaultId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
     const defaultToken = process.env.CLOUDFLARE_API_TOKEN?.trim();
     if (!defaultId || !defaultToken) {
-      throw new HTTPException(503, { message: "默认账户尚未配置，可添加自己的账户。" });
+      throw new HTTPException(503, { message: "请在服务端配置默认账户的 Account ID 和 API Token。" });
     }
     return { accountId: defaultId, token: defaultToken };
   }
@@ -49,13 +49,13 @@ export function createCloudflareClient(token, requestSignal) {
     const details = payload?.errors?.[0]?.message ?? "";
     const code = payload?.errors?.[0]?.code;
     if (response.status === 429 || /rate limit/i.test(details)) {
-      throw new HTTPException(429, { message: "Cloudflare 请求频率已达上限，请稍后刷新。" });
+      throw new HTTPException(429, { message: "Cloudflare 请求频率已达上限，请稍后再试。" });
     }
     if (/time range|notOlderThan|too old|maxDuration|date range|older than|query time limit|query duration/i.test(details)) {
       throw new HTTPException(422, { message: "所选范围超出 Cloudflare 对此指标提供的历史范围。" });
     }
     if (response.status === 401 || response.status === 403 || code === 10000 ||
-        /authenticat|access denied|permission|not entitled|not enabled|not available/i.test(details)) {
+        /authenticat|access denied|does not have access|permission|not entitled|not enabled|not available/i.test(details)) {
       throw new HTTPException(403, { message: "读取权限不足，或当前 Cloudflare 套餐未提供此数据。" });
     }
     if (response.status === 404) {

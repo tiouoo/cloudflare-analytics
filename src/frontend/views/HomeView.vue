@@ -1,213 +1,136 @@
 <script setup>
-import { computed, ref, shallowRef, watch } from "vue";
-import { Button, Select } from "ant-design-vue";
-import { DeleteOutlined, GlobalOutlined, ReloadOutlined } from "@ant-design/icons-vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch } from "vue";
+import { CloseOutlined, MenuOutlined } from "@ant-design/icons-vue";
 import { useRoute } from "vue-router";
-import { currentSection } from "../analytics/sections.js";
+import { dashboardSections } from "../analytics/sections.js";
 import { useResource } from "../analytics/useResource.js";
 import { queryCloudflare } from "../api/cloudflare.js";
-import AnalyticsPanel from "../components/AnalyticsPanel.vue";
+import DashboardNav from "../components/DashboardNav.vue";
+import DashboardScope from "../components/DashboardScope.vue";
 
-defineProps({ timeRange: String, dark: Boolean });
-
+defineProps({ timeRange: { type: String, required: true }, dark: Boolean });
 const route = useRoute();
-const section = computed(() => currentSection(route.query.view));
-const account = shallowRef(null);
-const cache = shallowRef(new Map());
-const zone = ref("");
-const cacheCleared = ref(false);
-
-watch([() => route.params.accountId, () => route.params.token], ([id, token]) => {
-  account.value = id && token ? { id, token } : null;
-  zone.value = "";
-  cache.value = new Map();
-  cacheCleared.value = false;
-}, { immediate: true });
-
-const {
-  result: zoneResult,
-  loading: zonesLoading,
-  error: zonesError,
-  refresh: refreshZones,
-} = useResource(
-  cache,
-  computed(() => "zones"),
+const account = computed(() => {
+  const { accountId, token } = route.params;
+  return accountId && token ? { id: accountId, token } : null;
+});
+const { result, error, loading } = useResource([account],
   (signal) => queryCloudflare("zones", { account: account.value, signal }),
 );
+const zoneGroups = computed(() => (result.value?.zones ?? []).map((zone) => ({
+  ...dashboardSections(zone),
+  zone,
+})));
+const overview = dashboardSections();
+const groups = computed(() => [overview, ...zoneGroups.value]);
+const active = ref(overview.id);
+const activeGroup = ref(overview.id);
+const main = useTemplateRef("main");
+const drawer = useTemplateRef("drawer");
+const mobile = window.matchMedia("(max-width: 800px)");
+let frame;
+let resize;
+let pendingHash = window.location.hash;
 
-const zones = computed(() => zoneResult.value?.data.zones ?? []);
-const zoneOptions = computed(() =>
-  zones.value.map(({ id, name }) => ({ value: id, label: name })),
-);
-
-watch(zones, (nextZones) => {
-  if (!nextZones.some(({ id }) => id === zone.value)) zone.value = nextZones[0]?.id ?? "";
-});
-
-function clearCache() {
-  cache.value.clear();
-  cacheCleared.value = true;
+function updateActive() {
+  const anchors = [...(main.value?.querySelectorAll("[data-dashboard-anchor]") ?? [])];
+  if (!anchors.length) return;
+  let current = anchors[0];
+  const offset = parseFloat(getComputedStyle(current).scrollMarginTop) + 10;
+  for (const node of anchors) {
+    if (node.getBoundingClientRect().top > offset) break;
+    current = node;
+  }
+  if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2 && window.scrollY > 0) {
+    const target = document.getElementById(window.location.hash.slice(1));
+    const last = anchors.at(-1);
+    current = anchors.includes(target) && target.getBoundingClientRect().top > offset ? target : last;
+  }
+  active.value = current.id;
+  activeGroup.value = current.dataset.group;
 }
+
+function scheduleScrollUpdate() {
+  cancelAnimationFrame(frame);
+  frame = requestAnimationFrame(updateActive);
+}
+
+function restoreTarget() {
+  if (!pendingHash) return;
+  const target = document.getElementById(pendingHash.slice(1));
+  if (!target) return;
+  pendingHash = "";
+  target.scrollIntoView({ block: "start", behavior: "instant" });
+  scheduleScrollUpdate();
+}
+
+function onHashChange() {
+  // The browser handles existing fragment targets. Keep a deep link pending while sites load.
+  const hash = window.location.hash;
+  pendingHash = hash && !document.getElementById(hash.slice(1)) ? hash : "";
+  scheduleScrollUpdate();
+}
+
+function closeDrawerOnDesktop({ matches }) {
+  if (!matches && drawer.value?.open) drawer.value.close();
+}
+
+onMounted(() => {
+  resize = new ResizeObserver(scheduleScrollUpdate);
+  resize.observe(main.value);
+  window.addEventListener("scroll", scheduleScrollUpdate, { passive: true });
+  window.addEventListener("resize", scheduleScrollUpdate);
+  window.addEventListener("hashchange", onHashChange);
+  mobile.addEventListener("change", closeDrawerOnDesktop);
+  restoreTarget();
+  scheduleScrollUpdate();
+});
+onUnmounted(() => {
+  resize?.disconnect();
+  cancelAnimationFrame(frame);
+  window.removeEventListener("scroll", scheduleScrollUpdate);
+  window.removeEventListener("resize", scheduleScrollUpdate);
+  window.removeEventListener("hashchange", onHashChange);
+  mobile.removeEventListener("change", closeDrawerOnDesktop);
+});
+watch(groups, async () => {
+  await nextTick();
+  restoreTarget();
+  scheduleScrollUpdate();
+});
 </script>
 
 <template>
-  <section class="dashboard" aria-labelledby="dashboard-title">
-    <header class="dashboard-header">
-      <div>
-        <h2 id="dashboard-title">{{ section.title }}</h2>
-      </div>
-      <div class="dashboard-controls">
-        <div v-if="!section.accountWide" class="zone-control">
-          <label for="zone-select">
-            <GlobalOutlined aria-hidden="true" />
-            站点
-          </label>
-          <Select
-            id="zone-select"
-            v-model:value="zone"
-            aria-label="站点"
-            class="picker-select zone-select"
-            popup-class-name="picker-popup"
-            :options="zoneOptions"
-            :loading="zonesLoading"
-            :disabled="!zones.length"
-            show-search
-            option-filter-prop="label"
-          >
-            <template v-if="!zonesLoading" #suffixIcon>
-              <span class="picker-chevron" aria-hidden="true" />
-            </template>
-          </Select>
-        </div>
-        <Button
-          class="clear-cache"
-          :aria-label="cacheCleared ? '再次清除浏览器缓存' : '清除浏览器缓存'"
-          @click="clearCache"
-        >
-          <DeleteOutlined aria-hidden="true" />
-          <span>{{ cacheCleared ? "缓存已清除" : "清除缓存" }}</span>
-        </Button>
-      </div>
-    </header>
-
-    <div v-if="section.accountWide || zone" class="panel-grid">
-      <AnalyticsPanel
-        v-for="name in section.panels"
-        :key="name"
-        :name="name"
-        :cache="cache"
-        :zone="section.accountWide ? undefined : zone"
-        :account="account"
-        :range="timeRange"
-        :dark="dark"
-      />
-    </div>
-
-    <div v-else class="zone-state" :aria-busy="zonesLoading">
-      <GlobalOutlined class="zone-state-icon" aria-hidden="true" />
-      <p v-if="zonesLoading" role="status">正在读取 Cloudflare 站点…</p>
-      <template v-else>
-        <p :role="zonesError ? 'alert' : 'status'">
-          {{ zonesError || "此账户下没有可访问的站点。" }}
+  <div class="dashboard-layout">
+    <aside class="dashboard-sidebar">
+      <DashboardNav :groups="groups" :active="active" :active-group="activeGroup" />
+    </aside>
+    <Teleport to="#mobile-directory">
+      <button type="button" class="icon-button" aria-label="本页目录" aria-haspopup="dialog" @click="drawer.showModal()">
+        <MenuOutlined aria-hidden="true" />
+      </button>
+    </Teleport>
+    <main ref="main" class="dashboard-main">
+      <DashboardScope :group="overview" :account="account" :range="timeRange" :dark="dark" />
+      <DashboardScope v-for="group in zoneGroups" :key="group.zone.id"
+        :group="group" :zone="group.zone" :account="account" :range="timeRange" :dark="dark" />
+      <div v-if="!zoneGroups.length" class="sites-message">
+        <h2>站点分析</h2>
+        <p :role="error ? 'alert' : 'status'">
+          {{ loading ? "正在读取 Cloudflare 站点…" : error || "没有可显示的站点。" }}
         </p>
-        <Button @click="refreshZones">
-          <ReloadOutlined aria-hidden="true" />
-          重新读取站点
-        </Button>
-      </template>
-    </div>
-  </section>
+      </div>
+    </main>
+    <dialog ref="drawer" class="index-drawer" aria-labelledby="drawer-title" @click.self="drawer.close()">
+      <div class="drawer-content">
+        <header>
+          <strong id="drawer-title">本页目录</strong>
+          <button type="button" class="icon-button" aria-label="关闭目录" @click="drawer.close()">
+            <CloseOutlined aria-hidden="true" />
+          </button>
+        </header>
+        <DashboardNav :groups="groups" :active="active" :active-group="activeGroup" @navigate="drawer.close()" />
+      </div>
+    </dialog>
+  </div>
 </template>
-
-<style scoped>
-.dashboard {
-  max-width: 1460px;
-  margin-inline: auto;
-}
-
-.dashboard-header,
-.dashboard-controls,
-.zone-control,
-.zone-control label {
-  display: flex;
-  align-items: center;
-}
-
-.dashboard-header {
-  min-height: 48px;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 14px 24px;
-  margin-bottom: 20px;
-}
-
-.dashboard-header h2 {
-  color: var(--text);
-  font-size: clamp(24px, 3vw, 34px);
-  font-weight: 650;
-  letter-spacing: -0.03em;
-}
-
-.dashboard-controls {
-  max-width: 100%;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-}
-
-.zone-control {
-  min-width: 0;
-  gap: 8px;
-}
-
-.zone-control label {
-  flex-shrink: 0;
-  gap: 6px;
-  color: var(--muted);
-}
-
-.zone-select {
-  width: clamp(126px, 26vw, 228px);
-}
-
-.clear-cache {
-  flex-shrink: 0;
-}
-
-.panel-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.zone-state {
-  display: grid;
-  min-height: 220px;
-  align-content: center;
-  justify-items: center;
-  gap: 12px;
-  padding: 22px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface);
-  color: var(--muted);
-  text-align: center;
-}
-
-.zone-state-icon {
-  color: var(--accent);
-  font-size: 24px;
-}
-
-@media (max-width: 620px) {
-  .dashboard-header {
-    align-items: start;
-    flex-direction: column;
-    margin-bottom: 16px;
-  }
-
-  .panel-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
-  }
-}
-</style>

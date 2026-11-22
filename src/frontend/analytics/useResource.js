@@ -1,57 +1,36 @@
 import { onScopeDispose, ref, shallowRef, watch } from "vue";
 
-const ttl = 60_000;
-
-export function useResource(cache, key, fetchData) {
+export function useResource(dependencies, fetchData, ready = ref(true)) {
   const result = shallowRef(null);
-  const loading = ref(false);
   const error = ref("");
-  const cached = ref(false);
-  let controller;
+  const loading = ref(false);
+  let needsLoad = true;
+  let request;
 
-  async function load(force = false) {
-    controller?.abort();
-    const records = cache.value;
-    const resourceKey = key.value;
+  watch(dependencies, () => {
+    request?.abort();
+    needsLoad = true;
+    result.value = null;
     error.value = "";
     loading.value = false;
-    if (!resourceKey) return;
+  }, { flush: "sync" });
 
-    const now = Date.now();
-    for (const [recordKey, record] of records) {
-      if (now - record.updatedAt >= ttl) records.delete(recordKey);
-    }
-    const saved = records.get(resourceKey);
-    if (!force && saved) {
-      result.value = saved;
-      cached.value = true;
-      return;
-    }
-
-    const request = new AbortController();
-    controller = request;
+  watch([...dependencies, ready], async () => {
+    if (!ready.value || !needsLoad) return;
+    const controller = new AbortController();
+    request = controller;
+    needsLoad = false;
     loading.value = true;
     try {
-      const data = await fetchData(request.signal);
-      if (request.signal.aborted) return;
-
-      const record = { data, updatedAt: Date.now() };
-      records.set(resourceKey, record);
-      result.value = record;
-      cached.value = false;
+      const data = await fetchData(controller.signal);
+      if (!controller.signal.aborted) result.value = data;
     } catch (failure) {
-      if (!request.signal.aborted) error.value = failure.message;
+      if (!controller.signal.aborted) error.value = failure.message;
     } finally {
-      if (!request.signal.aborted) loading.value = false;
+      if (!controller.signal.aborted) loading.value = false;
     }
-  }
-
-  watch([cache, key], () => {
-    result.value = null;
-    cached.value = false;
-    load();
   }, { immediate: true });
-  onScopeDispose(() => controller?.abort());
 
-  return { result, loading, error, cached, refresh: () => load(true) };
+  onScopeDispose(() => request?.abort());
+  return { result, loading, error };
 }

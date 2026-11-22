@@ -12,8 +12,7 @@
   --picker-highlight: #595969;
 }
 
-.picker-trigger,
-.picker-select.ant-select.ant-select-single .ant-select-selector {
+.picker-trigger {
   height: var(--picker-height);
   padding-inline: 12px 14px;
   border: 1px solid var(--border);
@@ -22,9 +21,6 @@
   color: var(--text);
   font-size: 13px;
   transition: border-color 0.15s ease;
-}
-
-.picker-trigger {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -36,8 +32,7 @@
 
 .picker-trigger:hover,
 .picker-trigger:focus-visible,
-.picker-trigger[aria-expanded="true"],
-.picker-select.ant-select.ant-select-single:not(.ant-select-disabled):is(:hover, .ant-select-focused) .ant-select-selector {
+.picker-trigger[aria-expanded="true"] {
   border-color: var(--picker-focus);
 }
 
@@ -57,20 +52,15 @@
   transform: rotate(45deg);
 }
 
-.picker-popup.range-list,
-.picker-popup.ant-select-dropdown,
-.picker-popup.ant-dropdown .ant-dropdown-menu {
+.picker-popup.range-list {
   padding: 0;
-  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--elevated);
   box-shadow: none;
 }
 
-.picker-option,
-.picker-popup.ant-dropdown .ant-dropdown-menu .ant-dropdown-menu-item,
-.picker-popup.ant-select-dropdown .ant-select-item-option {
+.picker-option {
   min-height: 24px;
   padding: 3px 12px;
   border-radius: 0;
@@ -79,25 +69,7 @@
   line-height: 18px;
 }
 
-.picker-option.is-active,
-.picker-popup.ant-dropdown .ant-dropdown-menu .ant-dropdown-menu-item:hover,
-.picker-popup.ant-dropdown .ant-dropdown-menu .ant-dropdown-menu-item-active,
-.picker-popup.ant-select-dropdown .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+.picker-option.is-active {
   background: var(--picker-highlight);
   color: #fff;
-}
-
-.picker-select.ant-select.ant-select-single,
-.picker-select.ant-select.ant-select-single .ant-select-selection-search-input {
-  height: var(--picker-height);
-}
-
-.picker-select.ant-select.ant-select-single .ant-select-selection-item,
-.picker-select.ant-select.ant-select-single .ant-select-selection-placeholder {
-  line-height: calc(var(--picker-height) - 2px);
-  padding-inline-end: 16px;
-}
-
-.picker-select.ant-select .ant-select-arrow {
-  inset-inline-end: 14px;
 }

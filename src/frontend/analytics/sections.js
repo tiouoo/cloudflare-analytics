@@ -1,25 +1,36 @@
 import {
   ApiOutlined,
-  AppstoreOutlined,
+  CheckCircleOutlined,
   CloudServerOutlined,
   DashboardOutlined,
   DatabaseOutlined,
   GlobalOutlined,
+  RetweetOutlined,
   SafetyCertificateOutlined,
   ThunderboltOutlined,
+  WarningOutlined,
 } from "@ant-design/icons-vue";
 
-export const sections = [
-  { id: "overview", title: "概览", icon: AppstoreOutlined, panels: ["requests", "visits", "trend"] },
-  { id: "http", title: "HTTP 流量", icon: GlobalOutlined, panels: ["requests", "visits", "trend", "countries", "status-codes", "api-requests"] },
-  { id: "cache", title: "缓存", icon: DatabaseOutlined, panels: ["cache"] },
-  { id: "security", title: "安全事件", icon: SafetyCertificateOutlined, panels: ["security"] },
-  { id: "dns", title: "DNS 分析", icon: ApiOutlined, panels: ["dns"] },
-  { id: "workers", title: "Workers", icon: ThunderboltOutlined, panels: ["workers"], accountWide: true },
-  { id: "performance", title: "性能", icon: DashboardOutlined, panels: ["performance"] },
-  { id: "infrastructure", title: "基础设施", icon: CloudServerOutlined, panels: ["infrastructure"] },
+const traffic = [
+  ["requests", "HTTP 请求", GlobalOutlined],
+  ["errors", "错误率", WarningOutlined],
+  ["2xx", "2xx 成功", CheckCircleOutlined],
+  ["3xx", "3xx 重定向", RetweetOutlined],
+  ["versions", "HTTP 版本", CloudServerOutlined],
+  ["cache", "缓存命中率", DatabaseOutlined],
+  ["security", "安全事件", SafetyCertificateOutlined],
+  ["audience", "访问与地区", GlobalOutlined],
+  ["dns", "DNS 查询", ApiOutlined],
+  ["network", "性能与网络", DashboardOutlined],
+  ["endpoints", "API Gateway", ApiOutlined],
 ];
 
-export function currentSection(view) {
-  return sections.find(({ id }) => id === view) ?? sections[0];
+export function dashboardSections(zone) {
+  const id = zone ? "site-" + zone.name.toLowerCase() : "overview";
+  const sections = zone ? traffic : [...traffic, ["products", "Cloudflare 产品", ThunderboltOutlined]];
+  return {
+    id,
+    title: zone?.name ?? "概览",
+    sections: sections.map(([key, title, icon]) => ({ id: id + "-" + key, title, icon })),
+  };
 }
