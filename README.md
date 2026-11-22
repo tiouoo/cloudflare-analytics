@@ -4,6 +4,16 @@
 
 账户概览通过 Cloudflare GraphQL 的 `accounts` 作用域查询。站点列表来自 Cloudflare REST API，站点数据通过 GraphQL 的 `zones` 作用域查询，并在相应站点进入视野附近时加载。打开页面或切换时间范围时按需向 Cloudflare 查询，分析响应使用 `Cache-Control: private, no-store`。
 
+## 部署到 Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ftiouoo%2Fcloudflare-analytics&env=CLOUDFLARE_ACCOUNT_ID%2CCLOUDFLARE_API_TOKEN%2CCLOUDFLARE_VISIBLE_DOMAINS&envLink=https%3A%2F%2Fgithub.com%2Ftiouoo%2Fcloudflare-analytics%23cloudflare-api-%E6%9D%83%E9%99%90)
+
+部署表单会列出以下三个环境变量。
+
+- `CLOUDFLARE_ACCOUNT_ID` 填写 Cloudflare 账户 ID。
+- `CLOUDFLARE_API_TOKEN` 填写具有下方所列权限的 Cloudflare API Token。
+- `CLOUDFLARE_VISIBLE_DOMAINS` 填写用逗号分隔的域名。应用在此变量为空时显示账户下所有可访问的站点。
+
 ## 本地运行
 
 将 `.env.example` 复制为项目根目录的 `.env`，填写默认账户的 Account ID 和 API Token。
