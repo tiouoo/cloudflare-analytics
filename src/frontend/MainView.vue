@@ -62,9 +62,7 @@ watch(timeRange, (value) => {
         >
           <MenuOutlined aria-hidden="true" />
         </button>
-        <span class="brand-icon" aria-hidden="true">
-          <CloudOutlined />
-        </span>
+        <CloudOutlined class="brand-icon" aria-hidden="true" />
         <h1>cf.chilo.top</h1>
       </div>
       <div class="header-controls">
@@ -147,15 +145,9 @@ watch(timeRange, (value) => {
 }
 
 .brand-icon {
-  display: grid;
-  width: 30px;
-  height: 30px;
   flex: none;
-  place-items: center;
-  border-radius: 9px;
-  background: var(--selected);
   color: var(--accent-active);
-  font-size: 19px;
+  font-size: 22px;
 }
 
 .icon-button {
@@ -295,9 +287,7 @@ watch(timeRange, (value) => {
   }
 
   .brand-icon {
-    display: grid;
-    width: 26px;
-    height: 26px;
+    display: inline-flex;
   }
 }
 </style>

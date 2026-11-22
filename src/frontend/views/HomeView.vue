@@ -66,13 +66,18 @@ function clearCache() {
             id="zone-select"
             v-model:value="zone"
             aria-label="站点"
-            class="zone-select"
+            class="picker-select zone-select"
+            popup-class-name="picker-popup"
             :options="zoneOptions"
             :loading="zonesLoading"
             :disabled="!zones.length"
             show-search
             option-filter-prop="label"
-          />
+          >
+            <template v-if="!zonesLoading" #suffixIcon>
+              <span class="picker-chevron" aria-hidden="true" />
+            </template>
+          </Select>
         </div>
         <Button
           class="clear-cache"

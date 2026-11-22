@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { getRequestListener } from '@hono/node-server';
 import app from './src/backend/api.js';
@@ -21,6 +21,11 @@ function backendPlugin() {
   return {
     name: 'hono-backend',
     configureServer(server) {
+      const localEnv = loadEnv(server.config.mode, server.config.envDir, 'CLOUDFLARE_');
+      for (const key of ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN']) {
+        if (localEnv[key]) process.env[key] ??= localEnv[key];
+      }
+
       server.middlewares.use(apiMiddleware(async () => {
         const module = await server.ssrLoadModule('/src/backend/api.js');
         return module.default;

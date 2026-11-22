@@ -74,7 +74,7 @@ function handleRangeKeydown(event) {
 <template>
   <div class="time-range">
     <button
-      class="range-trigger"
+      class="picker-trigger range-trigger"
       type="button"
       role="combobox"
       aria-label="时间范围"
@@ -88,13 +88,13 @@ function handleRangeKeydown(event) {
       @blur="rangeOpen = false"
     >
       {{ selectedRange.label }}
-      <span class="range-chevron" aria-hidden="true" />
+      <span class="picker-chevron" aria-hidden="true" />
     </button>
     <ul
       v-show="rangeOpen"
       :id="rangeListId"
       ref="rangeList"
-      class="range-list"
+      class="picker-popup range-list"
       role="listbox"
       aria-label="时间范围"
     >
@@ -102,7 +102,7 @@ function handleRangeKeydown(event) {
         v-for="({ value, label }, index) in timeRanges"
         :id="`${rangeListId}-${index}`"
         :key="value"
-        class="range-option"
+        class="picker-option range-option"
         :class="{ 'is-active': index === activeRangeIndex }"
         role="option"
         :aria-selected="value === timeRange"
@@ -118,55 +118,12 @@ function handleRangeKeydown(event) {
 
 <style scoped>
 .time-range {
-  --range-focus: #80aaff;
-  --range-chevron: #8090a9;
-  --range-highlight: #767676;
   position: relative;
   width: clamp(112px, 22vw, 148px);
 }
 
-.time-range:where([data-theme="dark"] *) {
-  --range-focus: #9bbcff;
-  --range-chevron: #a2aec2;
-  --range-highlight: #595969;
-}
-
 .range-trigger {
-  display: flex;
   width: 100%;
-  height: 36px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding-inline: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 13px;
-  text-align: start;
-  cursor: pointer;
-}
-
-.range-trigger:hover,
-.range-trigger:focus-visible,
-.range-trigger[aria-expanded="true"] {
-  border-color: var(--range-focus);
-}
-
-.range-trigger:focus-visible {
-  outline-color: var(--range-focus);
-}
-
-.range-chevron {
-  width: 8px;
-  height: 8px;
-  flex: none;
-  margin-block-start: -4px;
-  border-inline-end: 2px solid var(--range-chevron);
-  border-block-end: 2px solid var(--range-chevron);
-  border-end-end-radius: 1px;
-  transform: rotate(45deg);
 }
 
 .range-list {
@@ -176,24 +133,11 @@ function handleRangeKeydown(event) {
   inset-inline: 0;
   max-height: min(280px, calc(100dvh - 60px));
   margin: 0;
-  padding: 0;
   overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--elevated);
   list-style: none;
 }
 
 .range-option {
-  padding: 3px 12px;
-  font-size: 13px;
-  line-height: 18px;
   cursor: pointer;
-  transition: none;
-}
-
-.range-option.is-active {
-  background: var(--range-highlight);
-  color: #fff;
 }
 </style>

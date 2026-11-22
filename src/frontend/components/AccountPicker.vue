@@ -1,12 +1,7 @@
 <script setup>
 import { ref } from "vue";
 import { Button, Drawer, Dropdown, Input, Menu, MenuItem } from "ant-design-vue";
-import {
-  DownOutlined,
-  PlusOutlined,
-  SwapOutlined,
-  UserOutlined,
-} from "@ant-design/icons-vue";
+import { UserOutlined } from "@ant-design/icons-vue";
 import { useRoute, useRouter } from "vue-router";
 import { identifierPattern, tokenPattern } from "../../analytics/credentials.js";
 
@@ -14,6 +9,7 @@ defineProps({ custom: Boolean });
 
 const route = useRoute();
 const router = useRouter();
+const menuOpen = ref(false);
 const open = ref(false);
 const accountId = ref("");
 const token = ref("");
@@ -21,6 +17,7 @@ const error = ref("");
 const firstInput = ref(null);
 
 async function select({ key }) {
+  menuOpen.value = false;
   if (key === "default") {
     await router.push({ name: "home", query: route.query });
     return;
@@ -59,22 +56,27 @@ function close() {
 </script>
 
 <template>
-  <Dropdown :trigger="['click']" placement="bottomRight">
-    <Button class="account-trigger" :aria-label="custom ? '自定义账户' : '默认账户'">
-      <UserOutlined aria-hidden="true" />
+  <Dropdown
+    v-model:open="menuOpen"
+    :trigger="['click']"
+    placement="bottomRight"
+    overlay-class-name="picker-popup"
+  >
+    <button
+      class="picker-trigger account-trigger"
+      type="button"
+      aria-haspopup="menu"
+      :aria-expanded="menuOpen"
+      :aria-label="custom ? '自定义账户' : '默认账户'"
+    >
+      <UserOutlined class="account-symbol" aria-hidden="true" />
       <span class="account-label">{{ custom ? "自定义账户" : "默认账户" }}</span>
-      <DownOutlined class="chevron" aria-hidden="true" />
-    </Button>
+      <span class="picker-chevron" aria-hidden="true" />
+    </button>
     <template #overlay>
       <Menu @click="select">
-        <MenuItem key="add">
-          <PlusOutlined aria-hidden="true" />
-          添加账户
-        </MenuItem>
-        <MenuItem v-if="custom" key="default">
-          <SwapOutlined aria-hidden="true" />
-          切回默认账户
-        </MenuItem>
+        <MenuItem key="add">添加账户</MenuItem>
+        <MenuItem v-if="custom" key="default">切回默认账户</MenuItem>
       </Menu>
     </template>
   </Dropdown>
@@ -126,18 +128,8 @@ function close() {
 </template>
 
 <style scoped>
-.account-trigger {
-  display: inline-flex;
-  height: 36px;
-  align-items: center;
-  gap: 7px;
-  padding-inline: 10px;
-  border-radius: 8px;
-  white-space: nowrap;
-}
-
-.chevron {
-  font-size: 9px;
+.account-symbol {
+  display: none;
 }
 
 .account-form {
@@ -183,6 +175,10 @@ function close() {
   .account-trigger {
     gap: 5px;
     padding-inline: 8px;
+  }
+
+  .account-symbol {
+    display: inline-flex;
   }
 }
 </style>
