@@ -29,7 +29,9 @@ npm run dev
 2. 添加 **Account → Account Analytics → Read**、**Zone → Zone → Read**、**Zone → Analytics → Read**，并将资源范围设为所需的账户和站点。[Cloudflare 权限说明](https://developers.cloudflare.com/fundamentals/api/reference/permissions/)
 3. 将 Token 和账户 ID 分别填入服务端环境变量。[查找 Account ID](https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/)
 
-各数据集的访问权限和历史窗口取决于 Cloudflare 套餐及 Token。超过可查询范围时，模块会注明实际统计区间。“所有时间”读取每个数据集可单次查询的最长区间。
+各数据集的访问权限和历史窗口取决于 Cloudflare 套餐及 Token。超过可查询范围时，模块会注明实际统计区间。环比对照紧邻当前区间、长度相同的上一段时间，历史范围不足时页面会注明。
+
+站点的客户端源端口和州省代码排行来自 Log Explorer。需为该站点启用 `http_requests` 数据集，采集 `ClientSrcPort` 和 `ClientRegionCode`，并为 Token 授予 `Logs Read` 权限。[Cloudflare Log Explorer](https://developers.cloudflare.com/observability/logs/log-explorer/)
 
 ## 通过 URL 访问其他账户
 

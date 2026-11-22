@@ -22,7 +22,7 @@ export const timeRanges = [
     duration: 12 * hour,
     bucket: "datetimeFiveMinutes",
   },
-  { value: "24h", label: "近 24 小时", duration: day, bucket: "datetimeHour" },
+  { value: "24h", label: "近 24 小时", duration: day, bucket: "datetimeFifteenMinutes" },
   { value: "7d", label: "近 7 天", duration: 7 * day, bucket: "datetimeHour" },
   { value: "15d", label: "近 15 天", duration: 15 * day, bucket: "date" },
   { value: "30d", label: "近 30 天", duration: 30 * day, bucket: "date" },

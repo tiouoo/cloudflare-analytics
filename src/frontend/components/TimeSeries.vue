@@ -14,7 +14,10 @@ const canvas = useTemplateRef("canvas");
 const hover = shallowRef(null);
 let chart;
 
-const bucketLabels = { datetimeMinute: "1 分钟", datetimeFiveMinutes: "5 分钟", datetimeHour: "1 小时", date: "1 天" };
+const bucketLabels = {
+  datetimeMinute: "1 分钟", datetimeFiveMinutes: "5 分钟", datetimeFifteenMinutes: "15 分钟",
+  datetimeHour: "1 小时", date: "1 天",
+};
 const timeLabel = computed(() => new Intl.DateTimeFormat("zh-CN", props.series.bucket === "date"
   ? { month: "long", day: "numeric", timeZone: "UTC" }
   : { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" },
@@ -190,6 +193,7 @@ onUnmounted(() => chart?.destroy());
 
 <style scoped>
 .chart { position: relative; height: var(--plot-height); min-width: 0; }
+.chart canvas { max-width: 100%; }
 .chart-tooltip {
   position: absolute;
   z-index: 1;

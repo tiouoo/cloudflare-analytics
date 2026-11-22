@@ -1,5 +1,6 @@
 import {
   ApiOutlined,
+  BarChartOutlined,
   CheckCircleOutlined,
   CloudServerOutlined,
   DashboardOutlined,
@@ -13,13 +14,17 @@ import {
 
 const traffic = [
   ["requests", "HTTP 请求", GlobalOutlined],
-  ["errors", "错误率", WarningOutlined],
+  ["encryption", "加密流量", SafetyCertificateOutlined],
+  ["cache", "缓存", DatabaseOutlined],
+  ["errors", "HTTP 错误", WarningOutlined],
+  ["audience", "设备与地区", GlobalOutlined],
   ["2xx", "2xx 成功", CheckCircleOutlined],
   ["3xx", "3xx 重定向", RetweetOutlined],
-  ["versions", "HTTP 版本", CloudServerOutlined],
-  ["cache", "缓存命中率", DatabaseOutlined],
+  ["versions", "协议与内容", CloudServerOutlined],
+  ["rankings", "HTTP 请求排行", BarChartOutlined],
+];
+const services = [
   ["security", "安全事件", SafetyCertificateOutlined],
-  ["audience", "访问与地区", GlobalOutlined],
   ["dns", "DNS 查询", ApiOutlined],
   ["network", "性能与网络", DashboardOutlined],
   ["endpoints", "API Gateway", ApiOutlined],
@@ -27,7 +32,9 @@ const traffic = [
 
 export function dashboardSections(zone) {
   const id = zone ? "site-" + zone.name.toLowerCase() : "overview";
-  const sections = zone ? traffic : [...traffic, ["products", "Cloudflare 产品", ThunderboltOutlined]];
+  const sections = zone
+    ? [...traffic, ["logs", "HTTP 日志排行", BarChartOutlined], ...services]
+    : [...traffic, ...services, ["products", "Cloudflare 产品", ThunderboltOutlined]];
   return {
     id,
     title: zone?.name ?? "概览",

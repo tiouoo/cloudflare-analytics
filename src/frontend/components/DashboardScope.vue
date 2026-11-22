@@ -1,13 +1,16 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, useTemplateRef } from "vue";
-import { BarChartOutlined, CloudOutlined, DatabaseOutlined, GlobalOutlined, SafetyCertificateOutlined } from "@ant-design/icons-vue";
-import { countryName, formatMetric } from "../analytics/panels.js";
+import { GlobalOutlined } from "@ant-design/icons-vue";
+import { countryName, formatMetric, formatNumber } from "../analytics/panels.js";
+import { cacheCards, encryptionCards, errorCards, overviewCards, trafficCards } from "../analytics/traffic.js";
 import { useResource } from "../analytics/useResource.js";
 import { queryCloudflare } from "../api/cloudflare.js";
 import MetricBreakdown from "./MetricBreakdown.vue";
 import MetricValues from "./MetricValues.vue";
 import PanelContent from "./PanelContent.vue";
+import RequestDistribution from "./RequestDistribution.vue";
 import TimeSeries from "./TimeSeries.vue";
+import TrafficCards from "./TrafficCards.vue";
 
 const props = defineProps({
   group: { type: Object, required: true },
@@ -41,29 +44,47 @@ onUnmounted(() => observer?.disconnect());
 const panels = computed(() => result.value?.panels ?? {});
 const totals = computed(() => panels.value.totals?.data);
 const securityActionLabel = "安全规则处理的 HTTP 请求";
-const hitRate = computed(() => totals.value?.requests ? 100 * totals.value.cachedRequests / totals.value.requests : null);
-const statusTotals = computed(() => panels.value.statuses?.data?.totals ?? []);
-const errorRate = computed(() => totals.value?.requests && statusTotals.value.length
-  ? 100 * (statusTotals.value[2] + statusTotals.value[3]) / totals.value.requests
-  : null);
-const kpis = computed(() => [
-  { label: "HTTP 请求数", value: totals.value?.requests, panel: panels.value.totals, icon: BarChartOutlined, target: "requests" },
-  { label: "HTTP 响应流量", value: totals.value?.bytes, unit: "bytes", panel: panels.value.totals, icon: CloudOutlined, target: "requests" },
-  { label: "缓存命中率", value: hitRate.value, unit: "%", panel: panels.value.totals, icon: DatabaseOutlined, target: "cache" },
-  { label: securityActionLabel, value: panels.value.securityActions?.data?.count, panel: panels.value.securityActions, icon: SafetyCertificateOutlined, target: "security" },
-]);
+const anchor = (key) => props.group.id + "-" + key;
+const cards = computed(() => trafficCards(panels.value));
+const rankingTotal = (key) => panels.value[key]?.from === panels.value.totals?.from ? totals.value?.requests : undefined;
 const seriesOptions = [
   { key: "requests", label: "请求数" },
+  { key: "visits", label: "访问次数" },
   { key: "bytes", label: "流量", unit: "bytes" },
   { key: "hitRate", label: "缓存命中率", unit: "%" },
 ];
 const selectedSeries = ref(seriesOptions[0]);
+const devices = { desktop: "桌面", mobile: "手机", tablet: "平板" };
+const cacheStatuses = {
+  hit: "命中", miss: "未命中", dynamic: "动态", expired: "已过期", bypass: "绕过",
+  revalidated: "重新验证", stale: "陈旧", updating: "正在更新", none: "无", unknown: "未知",
+};
+const rankGroups = [
+  { key: "versions", title: "协议与内容", compact: true, rankings: [
+    ["versions", "HTTP 版本"], ["tls", "TLS 版本", (value) => value === "none" ? "未加密" : value],
+    ["contentTypes", "热门内容类型", (value) => value || "无内容类型"],
+    ["tlsKeyExchangeGroups", "TLS 密钥交换组", (value) => value === "none" ? "无" : value],
+  ] },
+  { key: "rankings", title: "HTTP 请求排行", rankings: [
+    ["paths", "热门路径"], ["hosts", "热门主机"], ["ips", "热门客户端 IP"],
+    ["browsers", "热门浏览器"], ["operatingSystems", "热门操作系统"], ["userAgents", "热门 User-Agent"],
+    ["cacheStatuses", "热门缓存状态", (value) => cacheStatuses[value?.toLowerCase()] ?? value],
+    ["originStatuses", "热门源站状态码", (value) => value === 0 ? "无源站响应" : value],
+    ["methods", "热门 HTTP 方法"],
+  ] },
+  ...(props.zone ? [{ key: "logs", title: "HTTP 日志排行", compact: true, rankings: [
+    ["ports", "热门客户端源端口"], ["regions", "热门州省代码"],
+  ] }] : []),
+];
+const statusLabels = ["2xx 成功", "3xx 重定向", "4xx 客户端错误", "5xx 服务器错误"];
+const statusDistribution = (values) => values.map((value, index) => ({
+  label: statusLabels[index], value, id: index < 2 ? anchor(index + 2 + "xx") : undefined,
+}));
 const productValues = [
   { key: "pages", title: "Pages Functions", metrics: [["requests", "调用数"], ["errors", "错误数"]] },
   { key: "d1", title: "D1", metrics: [["readQueries", "读取查询"], ["writeQueries", "写入查询"], ["rowsRead", "读取行数"], ["rowsWritten", "写入行数"]] },
   { key: "r2", title: "R2", metrics: [["requests", "操作数"], ["responseBytes", "响应流量", "bytes"]] },
 ];
-const anchor = (key) => props.group.id + "-" + key;
 </script>
 
 <template>
@@ -77,17 +98,8 @@ const anchor = (key) => props.group.id + "-" + key;
       </div>
     </header>
     <p v-if="error" class="scope-error" role="alert">{{ error }}</p>
-    <dl class="kpi-grid">
-      <div v-for="kpi in kpis" :key="kpi.label" class="kpi">
-        <dt>
-          <component :is="kpi.icon" aria-hidden="true" />
-          <a :href="'#' + anchor(kpi.target)">{{ kpi.label }}</a>
-        </dt>
-        <dd :class="{ 'kpi-empty': kpi.value == null }">{{ formatMetric(kpi.value, kpi.unit) }}</dd>
-        <small v-if="kpi.panel?.error">数据不可用</small>
-        <small v-else-if="kpi.panel?.limited">按可查询范围统计</small>
-      </div>
-    </dl>
+    <TrafficCards :cards="cards(overviewCards)" :anchor="anchor" :dark="dark" />
+    <p v-if="totals && !panels.totals.previous" class="panel-message comparison-note">当前时间范围缺少完整的上一同等时段数据，环比暂不可用。</p>
 
     <article :id="anchor('requests')" class="panel traffic-panel" data-dashboard-anchor :data-group="group.id">
       <header class="panel-header">
@@ -107,44 +119,59 @@ const anchor = (key) => props.group.id + "-" + key;
       </PanelContent>
     </article>
 
-    <article :id="anchor('errors')" class="panel" data-dashboard-anchor :data-group="group.id">
+    <section v-for="section in [
+      { key: 'encryption', title: '安全性', panel: panels.encrypted, cards: encryptionCards },
+      { key: 'cache', title: '缓存', panel: panels.totals, cards: cacheCards },
+      { key: 'errors', title: 'HTTP 错误', panel: panels.statuses, cards: errorCards },
+    ]" :id="anchor(section.key)" :key="section.key" class="panel metric-section" data-dashboard-anchor :data-group="group.id">
+      <h3>{{ section.title }}</h3>
+      <TrafficCards :cards="cards(section.cards)" :dark="dark" />
+      <p v-if="section.panel?.error || (section.key === 'errors' && panels.errorTrend?.error)" class="panel-message metric-note">
+        {{ section.panel?.error || panels.errorTrend.error }}
+      </p>
+    </section>
+
+    <section :id="anchor('audience')" class="audience-grid" data-dashboard-anchor :data-group="group.id">
+      <article class="panel">
+        <h3>按设备类型查看请求</h3>
+        <PanelContent :panel="panels.devices" :failed="error" v-slot="{ data }">
+          <RequestDistribution :rows="data.map(({ label, value }) => ({ label: devices[label?.toLowerCase()] ?? label ?? '未知', value }))" ring />
+        </PanelContent>
+      </article>
+      <article class="panel">
+        <header class="panel-header">
+          <h3>按国家或地区查看请求</h3>
+          <p v-if="totals" class="panel-message">页面浏览量 <strong>{{ formatNumber(totals.pageViews) }}</strong></p>
+        </header>
+        <PanelContent :panel="panels.countries" :failed="error" v-slot="{ data }">
+          <MetricBreakdown :rows="data" dimension="国家或地区" :label="countryName" :total="totals?.requests" ranked />
+        </PanelContent>
+      </article>
+    </section>
+
+    <article class="panel">
       <h3>HTTP 响应状态</h3>
-      <PanelContent :panel="panels.statuses" :failed="error">
-        <MetricValues :items="[
-          { label: '错误率（4xx + 5xx）', value: errorRate, unit: '%' },
-          { label: '4xx 客户端错误', value: statusTotals[2] },
-          { label: '5xx 服务器错误', value: statusTotals[3] },
-        ]" />
+      <PanelContent :panel="panels.statuses" :failed="error" v-slot="{ data }">
+        <RequestDistribution :rows="statusDistribution(data.totals)" :group="group.id" />
+        <details v-if="data.codes.length" class="status-details">
+          <summary>查看各边缘状态码</summary>
+          <MetricBreakdown :rows="data.codes" dimension="边缘响应状态码" :total="totals?.requests" ranked />
+        </details>
       </PanelContent>
-      <div v-for="({ key, label }, index) in [{ key: '2xx', label: '2xx 成功' }, { key: '3xx', label: '3xx 重定向' }]"
-        :id="anchor(key)" :key="key" class="status-line" data-dashboard-anchor :data-group="group.id">
-        <h4>{{ label }}</h4>
-        <strong>{{ formatMetric(statusTotals[index]) }}</strong>
+    </article>
+
+    <section v-for="{ key, title, rankings, compact } in rankGroups" :id="anchor(key)" :key="key" class="rank-section"
+      data-dashboard-anchor :data-group="group.id">
+      <h3>{{ title }}</h3>
+      <div class="rank-grid" :class="{ 'rank-grid-two': compact }">
+        <article v-for="[metric, label, format] in rankings" :key="metric" class="panel rank-card">
+          <h4>{{ label }}</h4>
+          <PanelContent :panel="panels[metric]" :failed="error" v-slot="{ data }">
+            <MetricBreakdown :rows="data" :dimension="label" :label="format" :total="key === 'logs' ? undefined : rankingTotal(metric)" ranked />
+          </PanelContent>
+        </article>
       </div>
-      <details v-if="panels.statuses?.data?.codes.length" class="status-details">
-        <summary>查看各状态码</summary>
-        <MetricBreakdown :rows="panels.statuses.data.codes" dimension="边缘响应状态码" />
-      </details>
-    </article>
-
-    <article :id="anchor('versions')" class="panel" data-dashboard-anchor :data-group="group.id">
-      <h3>HTTP 版本</h3>
-      <PanelContent :panel="panels.versions" :failed="error" v-slot="{ data }">
-        <MetricBreakdown :rows="data" dimension="HTTP 版本" />
-      </PanelContent>
-    </article>
-
-    <article :id="anchor('cache')" class="panel" data-dashboard-anchor :data-group="group.id">
-      <h3>缓存命中率</h3>
-      <PanelContent :panel="panels.totals" :failed="error" v-slot="{ data }">
-        <MetricValues :items="[
-          { label: '请求命中率', value: hitRate, unit: '%' },
-          { label: '缓存命中请求', value: data.cachedRequests },
-          { label: '缓存响应流量', value: data.cachedBytes, unit: 'bytes' },
-          { label: '总响应流量', value: data.bytes, unit: 'bytes' },
-        ]" />
-      </PanelContent>
-    </article>
+    </section>
 
     <article :id="anchor('security')" class="panel" data-dashboard-anchor :data-group="group.id">
       <h3>安全事件</h3>
@@ -162,18 +189,6 @@ const anchor = (key) => props.group.id + "-" + key;
             <MetricBreakdown :rows="data.actions" dimension="动作" />
           </PanelContent>
         </div>
-      </div>
-    </article>
-
-    <article :id="anchor('audience')" class="panel" data-dashboard-anchor :data-group="group.id">
-      <h3>访问与地区</h3>
-      <PanelContent :panel="panels.totals" :failed="error" v-slot="{ data }">
-        <MetricValues :items="[{ label: '访问次数', value: data.visits }, { label: '页面浏览量', value: data.pageViews }]" />
-      </PanelContent>
-      <div class="panel-block">
-        <PanelContent :panel="panels.countries" :failed="error" v-slot="{ data }">
-          <MetricBreakdown :rows="data" dimension="国家或地区" :label="countryName" />
-        </PanelContent>
       </div>
     </article>
 
